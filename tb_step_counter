@@ -1,41 +1,70 @@
 `timescale 1ns/1ps
 
-module tb_step_counter();
+module tb_step_counter_tilt();
 
-    reg clk, reset, sensor_in;
-    wire [6:0] seg0, seg1, seg2, seg3;
-    wire alert_led;
+  reg clk, reset, sensor_in;
+  wire [6:0] seg0, seg1, seg2, seg3;
+  wire alert_led;
 
-    // Instantiate top-level module
-    step_counter uut (
-        .clk(clk),
-        .reset(reset),
-        .sensor_in(sensor_in),
-        .seg0(seg0),
-        .seg1(seg1),
-        .seg2(seg2),
-        .seg3(seg3),
-        .alert_led(alert_led)
-    );
+  // Instantiate the DUT
+  step_counter uut(
+    .clk(clk),
+    .reset(reset),
+    .sensor_in(sensor_in),
+    .seg0(seg0),
+    .seg1(seg1),
+    .seg2(seg2),
+    .seg3(seg3),
+    .alert_led(alert_led)
+  );
 
-    // Generate clock (1 MHz: 1 μs period, 500 ns half period)
-    initial clk = 0;
-    always #500 clk = ~clk;
+  // Generate system clock (50 MHz typical FPGA clock)
+  initial clk = 0;
+  always #10 clk = ~clk; // 20 ns period = 50 MHz
 
-    integer i;
+  // Task to simulate one tilt event (with bounce)
+  task simulate_tilt_event;
+    integer j;
+    begin
+      // Simulate bouncing (noisy edges)
+      for (j = 0; j < 5; j = j + 1) begin
+        sensor_in = ~sensor_in;
+        #( (1 + j) * 100_000 ); // random small intervals (0.1~0.5 ms)
+      end
 
-    // Generate 120 pulse steps (each pulse > debounce threshold)
-    initial begin
-        reset = 1;
-        sensor_in = 0;
-        #2000 reset = 0;        // Deassert reset
+      // Hold stable HIGH for some time (sensor tilted)
+      sensor_in = 1;
+      #15_000_000; // 15 ms stable HIGH (valid tilt)
 
-        for (i = 0; i < 220; i = i + 1) begin
-            #50000 sensor_in = 1;   // Wait before pulse
-            #50000 sensor_in = 0;   // Pulse high (>16,000 ns for debounce at 1 MHz)
-        end
+      // Bounce again before returning to rest
+      for (j = 0; j < 4; j = j + 1) begin
+        sensor_in = ~sensor_in;
+        #( (1 + j) * 80_000 );
+      end
 
-        #50000 $stop;
+      // Finally stable Low
+      sensor_in = 0;
+      #20_000_000; // 20 ms rest before next step
     end
+  endtask
+
+  // Main simulation process
+  integer i;
+  initial begin
+    $display("---- Starting Tilt Sensor Step Counter Test ----");
+    reset = 1;
+    sensor_in = 0;
+    #1_000_000; // wait 1 ms
+    reset = 0;
+
+    // Simulate 10 tilt events
+    for (i = 0; i < 10; i = i + 1) begin
+      simulate_tilt_event();
+    end
+
+    #10_000_000;
+    $display("---- Test Completed ----");
+    $stop;
+  end
 
 endmodule
