@@ -1,0 +1,41 @@
+`timescale 1ns/1ps
+
+module tb_step_counter();
+
+    reg clk, reset, sensor_in;
+    wire [6:0] seg0, seg1, seg2, seg3;
+    wire alert_led;
+
+    // Instantiate top-level module
+    step_counter uut (
+        .clk(clk),
+        .reset(reset),
+        .sensor_in(sensor_in),
+        .seg0(seg0),
+        .seg1(seg1),
+        .seg2(seg2),
+        .seg3(seg3),
+        .alert_led(alert_led)
+    );
+
+    // Generate clock (1 MHz: 1 μs period, 500 ns half period)
+    initial clk = 0;
+    always #500 clk = ~clk;
+
+    integer i;
+
+    // Generate 120 pulse steps (each pulse > debounce threshold)
+    initial begin
+        reset = 1;
+        sensor_in = 0;
+        #2000 reset = 0;        // Deassert reset
+
+        for (i = 0; i < 220; i = i + 1) begin
+            #50000 sensor_in = 1;   // Wait before pulse
+            #50000 sensor_in = 0;   // Pulse high (>16,000 ns for debounce at 1 MHz)
+        end
+
+        #50000 $stop;
+    end
+
+endmodule

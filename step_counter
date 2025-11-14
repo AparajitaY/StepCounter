@@ -1,0 +1,37 @@
+//top level
+
+module step_counter(
+    input clk,
+    input reset,
+    input sensor_in,
+    output [6:0] seg0, seg1, seg2, seg3,
+    output alert_led
+);
+    wire clean_pulse, step_valid;
+    wire [15:0] step_count;
+    wire [3:0] t,h,te,o;
+wire pulse_out;
+
+debounce_sync u1 (
+    .clk(clk),
+    .reset(reset),
+    .sensor_in(sensor_in),
+    .pulse_out(pulse_out)  // pulse indicating valid step after debounce
+);
+
+step_fsm u2 (
+    .clk(clk),
+    .reset(reset),
+    .pulse_in(pulse_out),  // connect pulse from debounce here
+    .step_valid(step_valid)
+);
+
+step_count_logic  u3 (.clk(clk), .reset(reset), .step_valid(step_valid), .count(step_count));
+bin_to_bcd    u4 (.bin(step_count), .thousands(t), .hundreds(h), .tens(te), .ones(o));
+goal_alert    u5 (.count(step_count), .alert_led(alert_led));
+
+sevenseg_driver d0 (.digit(o),  .seg(seg3));
+sevenseg_driver d1 (.digit(te), .seg(seg0));
+sevenseg_driver d2 (.digit(h),  .seg(seg1));
+sevenseg_driver d3 (.digit(t),  .seg(seg2));
+endmodule

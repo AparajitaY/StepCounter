@@ -1,0 +1,39 @@
+module debounce_sync(
+    input clk,
+    input reset,
+    input sensor_in,
+    output reg pulse_out // Pulse generated once per valid event
+);
+    reg sync_0, sync_1;
+    reg [15:0] shift_reg;
+    reg last_stable_state;
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            sync_0 <= 0;
+            sync_1 <= 0;cccc
+            shift_reg <= 0;
+            last_stable_state <= 0;
+            pulse_out <= 0;
+        end else begin
+            // Synchronize sensor input
+            sync_0 <= sensor_in;
+            sync_1 <= sync_0;
+
+            // Shift register for debounce
+            shift_reg <= {shift_reg[14:0], sync_1};
+
+            // Generate pulse only on stable high (rising edge)
+            if (&shift_reg && last_stable_state == 0) begin
+    pulse_out <= 1; // Pulse only on rising edge (stable HIGH)
+    last_stable_state <= 1;
+end else begin
+    pulse_out <= 0; // Default: no pulse
+    if (~|shift_reg)
+        last_stable_state <= 0; // Track release, no pulse output
+end
+
+
+        end
+    end
+endmodule

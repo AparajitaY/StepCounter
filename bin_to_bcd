@@ -1,0 +1,23 @@
+module bin_to_bcd(
+    input [15:0] bin,
+    output reg [3:0] thousands, hundreds, tens, ones
+);
+    integer i;
+    reg [27:0] shift;
+    always @(*) begin
+        shift = 0;
+        shift[15:0] = bin;
+        for (i=0; i<16; i=i+1) begin
+            if (shift[19:16] >= 5) shift[19:16] = shift[19:16] + 3;
+            if (shift[23:20] >= 5) shift[23:20] = shift[23:20] + 3;
+            if (shift[27:24] >= 5) shift[27:24] = shift[27:24] + 3;
+            shift = shift << 1;
+        end
+        //{thousands, hundreds, tens, ones} = shift[27:12];
+		  thousands = shift[27:24];
+		  hundreds  = shift[23:20];
+		  tens      = shift[19:16];
+		  ones      = shift[15:12];
+
+    end
+endmodule

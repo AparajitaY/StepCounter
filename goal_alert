@@ -1,0 +1,14 @@
+module goal_alert(
+    input [15:0] count,
+    output reg alert_led
+);
+    parameter GOAL = 16'd100;  
+
+    always @(*) begin
+        //Turn on LED exactly when count is a multiple of 100s
+        if (count != 0 && (count % GOAL == 0))
+            alert_led = 1'b1;
+        else
+            alert_led = 1'b0;
+    end
+endmodule

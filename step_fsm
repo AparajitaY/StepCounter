@@ -1,0 +1,45 @@
+module step_fsm(
+    input clk,
+    input reset,
+    input pulse_in,        // from debounce
+    output reg step_valid  // high for one cycle per valid step
+);
+
+    // State encoding using parameters instead of typedef enum
+    parameter IDLE     = 2'b00;
+    parameter DETECT   = 2'b01;
+    parameter VALIDATE = 2'b10;
+    parameter COUNT    = 2'b11;
+
+    reg [1:0] state, next_state;cccccc
+    reg [7:0] stable_count; // Not used in current logic but declared
+
+    // State register
+    always @(posedge clk or posedge reset) begin
+        if (reset)
+            state <= IDLE;
+        else
+            state <= next_state;
+    end
+
+    // Next-state logic
+    always @(*) begin
+        next_state = state;
+        case (state)
+            IDLE:       if (pulse_in) next_state = DETECT;
+            DETECT:     next_state = VALIDATE;
+            VALIDATE:   next_state = COUNT;
+            COUNT:      if (!pulse_in) next_state = IDLE;
+            default:    next_state = IDLE;
+        endcase
+    end
+
+    // Output logic
+    always @(posedge clk or posedge reset) begin
+        if (reset)
+            step_valid <= 1'b0;
+        else
+            step_valid <= (state == COUNT);
+    end
+
+endmodule
